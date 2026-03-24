@@ -41,7 +41,6 @@ export default function LawyerScreen() {
         Gerencie clientes e processos
       </Text>
 
-      {/* BOTÃO CLIENTES */}
       <TouchableOpacity
         style={{
           backgroundColor: "#3b82f6",
@@ -62,7 +61,6 @@ export default function LawyerScreen() {
         </Text>
       </TouchableOpacity>
 
-      {/* LOGOUT */}
       <TouchableOpacity
         style={{
           backgroundColor: "#ef4444",

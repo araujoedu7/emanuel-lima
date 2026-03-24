@@ -4,10 +4,19 @@ import {
   Text,
   FlatList,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 
-import { useRouter } from "expo-router";
-import { collection, getDocs } from "firebase/firestore";
+import { useRouter, useFocusEffect } from "expo-router";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  query,
+  where,
+  writeBatch,
+} from "firebase/firestore";
 import { db } from "../../../src/services/firebase";
 
 type Client = {
@@ -25,6 +34,10 @@ export default function ClientsScreen() {
   useEffect(() => {
     fetchClients();
   }, []);
+
+  useFocusEffect(() => {
+    fetchClients();
+  });
 
   const fetchClients = async () => {
     try {
@@ -51,8 +64,56 @@ export default function ClientsScreen() {
     }
   };
 
+  const handleDeleteClient = (client: Client) => {
+    Alert.alert(
+      "Excluir cliente",
+      `Deseja excluir ${client.name}? Os processos desse cliente também serão removidos.`,
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const batch = writeBatch(db);
+
+              // Remove o documento do cliente
+              batch.delete(doc(db, "users", client.id));
+
+              // Busca e remove os processos vinculados ao cliente
+              const processesRef = collection(db, "processes");
+              const processesQuery = query(
+                processesRef,
+                where("clientId", "==", client.id)
+              );
+              const processSnapshot = await getDocs(processesQuery);
+
+              processSnapshot.forEach((processDoc) => {
+                batch.delete(doc(db, "processes", processDoc.id));
+              });
+
+              await batch.commit();
+
+              Alert.alert("Sucesso", "Cliente excluído com sucesso.");
+              fetchClients();
+            } catch (error: any) {
+              console.log("Erro ao excluir cliente:", error);
+              Alert.alert(
+                "Erro",
+                error.message || "Não foi possível excluir o cliente."
+              );
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const renderItem = ({ item }: { item: Client }) => (
-    <TouchableOpacity
+    <View
       style={{
         backgroundColor: "#fff",
         padding: 15,
@@ -63,28 +124,86 @@ export default function ClientsScreen() {
         shadowRadius: 5,
         elevation: 3,
       }}
-      onPress={() => {
-        console.log("Cliente clicado:", item.name);
-      }}
     >
-      <Text
-        style={{
-          fontSize: 18,
-          fontWeight: "bold",
-          color: "#0f172a",
-        }}
+      <TouchableOpacity
+        onPress={() => router.push(`/lawyer/clients/${item.id}` as any)}
       >
-        {item.name}
-      </Text>
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "bold",
+            color: "#0f172a",
+          }}
+        >
+          {item.name}
+        </Text>
 
-      <Text
+        <Text
+          style={{
+            color: "#475569",
+            marginTop: 4,
+            marginBottom: 12,
+          }}
+        >
+          {item.email}
+        </Text>
+      </TouchableOpacity>
+
+      <View
         style={{
-          color: "#475569",
+          flexDirection: "row",
+          justifyContent: "flex-end",
+          gap: 10,
         }}
       >
-        {item.email}
-      </Text>
-    </TouchableOpacity>
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#dbeafe",
+            width: 40,
+            height: 40,
+            borderRadius: 8,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onPress={() =>
+            router.push(
+              {
+                pathname: "/lawyer/clients/edit",
+                params: { clientId: item.id },
+              } as any
+            )
+          }
+        >
+          <Text
+            style={{
+              fontSize: 18,
+            }}
+          >
+            ✏️
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#fee2e2",
+            width: 40,
+            height: 40,
+            borderRadius: 8,
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+          onPress={() => handleDeleteClient(item)}
+        >
+          <Text
+            style={{
+              fontSize: 18,
+            }}
+          >
+            🗑️
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 
   return (
@@ -113,7 +232,7 @@ export default function ClientsScreen() {
           borderRadius: 10,
           marginBottom: 20,
         }}
-        onPress={() => router.push("/lawyer/clients/create")}
+        onPress={() => router.push("/lawyer/clients/create" as any)}
       >
         <Text
           style={{

@@ -6,13 +6,10 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-
 import { useRouter } from "expo-router";
-
-import { auth, db } from "../services/firebase";
-
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
+import { auth, db } from "../services/firebase";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -22,42 +19,45 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     try {
-      // Login no Firebase
       const userCredential = await signInWithEmailAndPassword(
         auth,
-        email,
+        email.trim(),
         password
       );
 
       const user = userCredential.user;
-
       console.log("UID logado:", user.uid);
 
-      // Buscar dados no Firestore
-      const docRef = doc(db, "users", user.uid);
-      const docSnap = await getDoc(docRef);
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
 
-      if (docSnap.exists()) {
-        const userData = docSnap.data();
-
-        console.log("Dados do Firestore:", userData);
-        console.log("Tipo do usuário:", userData.type);
-
-        // 🔥 Tratamento mais seguro (remove espaços)
-        const userType = userData.type.trim().toLowerCase();
-
-        if (userType === "advogado") {
-          router.replace("/lawyer");
-        } else if (userType === "cliente") {
-          router.replace("/client");
-        } else {
-          Alert.alert("Erro", "Tipo de usuário inválido");
-        }
-      } else {
-        Alert.alert("Erro", "Usuário não encontrado no Firestore");
+      if (!userSnap.exists()) {
+        Alert.alert("Erro", "Usuário não encontrado no Firestore.");
+        return;
       }
+
+      const userData = userSnap.data();
+      const userType = String(userData.type || "").trim().toLowerCase();
+
+      console.log("Dados do Firestore:", userData);
+      console.log("Tipo tratado:", userType);
+
+      if (userType === "advogado") {
+        console.log("Indo para /lawyer");
+        router.replace("/lawyer");
+        return;
+      }
+
+      if (userType === "cliente") {
+        console.log("Indo para /client");
+        router.replace("/client");
+        return;
+      }
+
+      Alert.alert("Erro", "Tipo de usuário inválido.");
     } catch (error) {
-      Alert.alert("Erro", error.message);
+      console.log("Erro no login:", error);
+      Alert.alert("Erro", error.message || "Não foi possível entrar.");
     }
   };
 
@@ -86,6 +86,8 @@ export default function LoginScreen() {
         placeholderTextColor="#aaa"
         value={email}
         onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
         style={{
           backgroundColor: "#1e293b",
           color: "#fff",
