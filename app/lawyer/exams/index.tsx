@@ -1,28 +1,35 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, FlatList, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
 import { db } from "../../../src/services/firebase";
 
-type Process = {
+type Exam = {
   id: string;
   title: string;
-  description: string;
+  date: string;
+  time: string;
+  location: string;
+  type: string;
   clientId: string;
 };
 
-export default function ClientProcessesScreen() {
+export default function ClientExamsScreen() {
   const router = useRouter();
-  const { clientId } = useLocalSearchParams<{ clientId: string }>();
+  const params = useLocalSearchParams();
 
-  const [processes, setProcesses] = useState<Process[]>([]);
+  const clientId = useMemo(() => {
+    const value = params.clientId;
+    return Array.isArray(value) ? value[0] : value;
+  }, [params.clientId]);
+
+  const [exams, setExams] = useState<Exam[]>([]);
   const [clientName, setClientName] = useState("");
 
   useEffect(() => {
     if (clientId) {
       fetchClientData();
-      fetchProcesses();
+      fetchExams();
     }
   }, [clientId]);
 
@@ -42,11 +49,11 @@ export default function ClientProcessesScreen() {
     }
   };
 
-  const fetchProcesses = async () => {
+  const fetchExams = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "processes"));
+      const querySnapshot = await getDocs(collection(db, "pericias"));
 
-      const list: Process[] = [];
+      const list: Exam[] = [];
 
       querySnapshot.forEach((docItem) => {
         const data = docItem.data();
@@ -55,20 +62,23 @@ export default function ClientProcessesScreen() {
           list.push({
             id: docItem.id,
             title: data.title ?? "",
-            description: data.description ?? "",
+            date: data.date ?? "",
+            time: data.time ?? "",
+            location: data.location ?? "",
+            type: data.type ?? "",
             clientId: data.clientId ?? "",
           });
         }
       });
 
-      setProcesses(list);
+      setExams(list);
     } catch (error) {
-      console.log("Erro ao buscar processos:", error);
+      console.log("Erro ao buscar perícias:", error);
     }
   };
 
-  const renderItem = ({ item }: { item: Process }) => (
-    <TouchableOpacity
+  const renderItem = ({ item }: { item: Exam }) => (
+    <View
       style={{
         backgroundColor: "#fff",
         padding: 15,
@@ -76,17 +86,6 @@ export default function ClientProcessesScreen() {
         marginBottom: 10,
         elevation: 3,
       }}
-      onPress={() =>
-        router.push(
-          {
-            pathname: "/lawyer/processes/[processId]",
-            params: {
-              processId: item.id,
-              clientId: item.clientId,
-            },
-          } as any
-        )
-      }
     >
       <Text
         style={{
@@ -99,14 +98,22 @@ export default function ClientProcessesScreen() {
         {item.title}
       </Text>
 
-      <Text
-        style={{
-          color: "#475569",
-        }}
-      >
-        {item.description}
+      <Text style={{ color: "#475569", marginBottom: 4 }}>
+        Tipo: {item.type}
       </Text>
-    </TouchableOpacity>
+
+      <Text style={{ color: "#475569", marginBottom: 4 }}>
+        Data: {item.date}
+      </Text>
+
+      <Text style={{ color: "#475569", marginBottom: 4 }}>
+        Horário: {item.time}
+      </Text>
+
+      <Text style={{ color: "#475569" }}>
+        Local: {item.location}
+      </Text>
+    </View>
   );
 
   return (
@@ -125,7 +132,7 @@ export default function ClientProcessesScreen() {
           color: "#0f172a",
         }}
       >
-        Processos do Cliente
+        Perícias do Cliente
       </Text>
 
       <Text
@@ -140,33 +147,6 @@ export default function ClientProcessesScreen() {
 
       <TouchableOpacity
         style={{
-          backgroundColor: "#22c55e",
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 12,
-        }}
-        onPress={() =>
-          router.push(
-            {
-              pathname: "/lawyer/processes/create",
-              params: { clientId },
-            } as any
-          )
-        }
-      >
-        <Text
-          style={{
-            color: "#fff",
-            textAlign: "center",
-            fontWeight: "bold",
-          }}
-        >
-          + Novo Processo
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={{
           backgroundColor: "#8b5cf6",
           padding: 15,
           borderRadius: 10,
@@ -175,7 +155,7 @@ export default function ClientProcessesScreen() {
         onPress={() =>
           router.push(
             {
-              pathname: "/lawyer/exams",
+              pathname: "/lawyer/exams/create",
               params: { clientId },
             } as any
           )
@@ -188,17 +168,17 @@ export default function ClientProcessesScreen() {
             fontWeight: "bold",
           }}
         >
-          Ver Perícias
+          + Nova Perícia
         </Text>
       </TouchableOpacity>
 
       <FlatList
-        data={processes}
+        data={exams}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListEmptyComponent={
           <Text style={{ textAlign: "center", color: "#64748b" }}>
-            Nenhum processo encontrado
+            Nenhuma perícia encontrada
           </Text>
         }
       />

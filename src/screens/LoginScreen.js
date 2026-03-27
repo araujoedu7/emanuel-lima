@@ -8,8 +8,9 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
+import { registerForPushNotificationsAsync } from "../services/notifications";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -41,6 +42,19 @@ export default function LoginScreen() {
 
       console.log("Dados do Firestore:", userData);
       console.log("Tipo tratado:", userType);
+
+      const expoPushToken = await registerForPushNotificationsAsync();
+
+      if (expoPushToken) {
+        try {
+          await updateDoc(userRef, {
+            expoPushToken,
+          });
+          console.log("Token salvo no usuário com sucesso.");
+        } catch (tokenError) {
+          console.log("Erro ao salvar token:", tokenError);
+        }
+      }
 
       if (userType === "advogado") {
         console.log("Indo para /lawyer");
