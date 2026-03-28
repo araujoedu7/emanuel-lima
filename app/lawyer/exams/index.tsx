@@ -1,7 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import {
+  View,
+  Text,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import {
+  collection,
+  deleteDoc,
+  doc,
+  getDoc,
+  getDocs,
+} from "firebase/firestore";
 import { db } from "../../../src/services/firebase";
 
 type Exam = {
@@ -37,15 +49,18 @@ export default function ClientExamsScreen() {
     try {
       if (!clientId) return;
 
-      const clientRef = doc(db, "users", clientId);
+      const clientRef = doc(db, "users", String(clientId));
       const clientSnap = await getDoc(clientRef);
 
       if (clientSnap.exists()) {
         const data = clientSnap.data();
         setClientName(data.name ?? "Cliente");
+      } else {
+        setClientName("Cliente");
       }
     } catch (error) {
       console.log("Erro ao buscar cliente:", error);
+      setClientName("Cliente");
     }
   };
 
@@ -58,7 +73,7 @@ export default function ClientExamsScreen() {
       querySnapshot.forEach((docItem) => {
         const data = docItem.data();
 
-        if (data.clientId === clientId) {
+        if (String(data.clientId) === String(clientId)) {
           list.push({
             id: docItem.id,
             title: data.title ?? "",
@@ -75,6 +90,47 @@ export default function ClientExamsScreen() {
     } catch (error) {
       console.log("Erro ao buscar perícias:", error);
     }
+  };
+
+  const handleDeleteExam = (examId: string) => {
+    Alert.alert(
+      "Excluir perícia",
+      "Tem certeza que deseja excluir esta perícia?",
+      [
+        {
+          text: "Cancelar",
+          style: "cancel",
+        },
+        {
+          text: "Excluir",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, "pericias", examId));
+
+              setExams((prev) => prev.filter((item) => item.id !== examId));
+
+              Alert.alert("Sucesso", "Perícia excluída com sucesso.");
+            } catch (error) {
+              console.log("Erro ao excluir perícia:", error);
+              Alert.alert("Erro", "Não foi possível excluir a perícia.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleEditExam = (examId: string) => {
+    router.push(
+      {
+        pathname: "/lawyer/exams/edit",
+        params: {
+          examId,
+          clientId,
+        },
+      } as any
+    );
   };
 
   const renderItem = ({ item }: { item: Exam }) => (
@@ -110,9 +166,56 @@ export default function ClientExamsScreen() {
         Horário: {item.time}
       </Text>
 
-      <Text style={{ color: "#475569" }}>
+      <Text style={{ color: "#475569", marginBottom: 14 }}>
         Local: {item.location}
       </Text>
+
+      <View
+        style={{
+          flexDirection: "row",
+          gap: 10,
+        }}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#3b82f6",
+            paddingVertical: 12,
+            borderRadius: 10,
+          }}
+          onPress={() => handleEditExam(item.id)}
+        >
+          <Text
+            style={{
+              color: "#fff",
+              textAlign: "center",
+              fontWeight: "bold",
+            }}
+          >
+            Editar
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "#ef4444",
+            paddingVertical: 12,
+            borderRadius: 10,
+          }}
+          onPress={() => handleDeleteExam(item.id)}
+        >
+          <Text
+            style={{
+              color: "#fff",
+              textAlign: "center",
+              fontWeight: "bold",
+            }}
+          >
+            Excluir
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 

@@ -1,207 +1,231 @@
 import { useEffect, useState } from "react";
-import { View, Text, FlatList, TouchableOpacity } from "react-native";
+import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
-
-import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../../src/services/firebase";
 
-type Process = {
-  id: string;
-  title: string;
-  description: string;
-  clientId: string;
-};
-
-export default function ClientProcessesScreen() {
+export default function ClientDetailsScreen() {
   const router = useRouter();
   const { clientId } = useLocalSearchParams<{ clientId: string }>();
 
-  const [processes, setProcesses] = useState<Process[]>([]);
   const [clientName, setClientName] = useState("");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (clientId) {
       fetchClientData();
-      fetchProcesses();
     }
   }, [clientId]);
 
   const fetchClientData = async () => {
     try {
+      setLoading(true);
+
       if (!clientId) return;
 
-      const clientRef = doc(db, "users", clientId);
+      const clientRef = doc(db, "users", String(clientId));
       const clientSnap = await getDoc(clientRef);
 
       if (clientSnap.exists()) {
         const data = clientSnap.data();
         setClientName(data.name ?? "Cliente");
+      } else {
+        setClientName("Cliente");
       }
     } catch (error) {
       console.log("Erro ao buscar cliente:", error);
+      setClientName("Cliente");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const fetchProcesses = async () => {
-    try {
-      const querySnapshot = await getDocs(collection(db, "processes"));
-
-      const list: Process[] = [];
-
-      querySnapshot.forEach((docItem) => {
-        const data = docItem.data();
-
-        if (data.clientId === clientId) {
-          list.push({
-            id: docItem.id,
-            title: data.title ?? "",
-            description: data.description ?? "",
-            clientId: data.clientId ?? "",
-          });
-        }
-      });
-
-      setProcesses(list);
-    } catch (error) {
-      console.log("Erro ao buscar processos:", error);
-    }
-  };
-
-  const renderItem = ({ item }: { item: Process }) => (
-    <TouchableOpacity
-      style={{
-        backgroundColor: "#fff",
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 10,
-        elevation: 3,
-      }}
-      onPress={() =>
-        router.push(
-          {
-            pathname: "/lawyer/processes/[processId]",
-            params: {
-              processId: item.id,
-              clientId: item.clientId,
-            },
-          } as any
-        )
-      }
-    >
-      <Text
+  if (loading) {
+    return (
+      <View
         style={{
-          fontSize: 18,
-          fontWeight: "bold",
-          color: "#0f172a",
-          marginBottom: 6,
+          flex: 1,
+          backgroundColor: "#f8fafc",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: 20,
         }}
       >
-        {item.title}
-      </Text>
-
-      <Text
-        style={{
-          color: "#475569",
-        }}
-      >
-        {item.description}
-      </Text>
-    </TouchableOpacity>
-  );
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={{ marginTop: 12, color: "#64748b" }}>
+          Carregando cliente...
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
       style={{
         flex: 1,
-        backgroundColor: "#f1f5f9",
+        backgroundColor: "#f8fafc",
         padding: 20,
       }}
     >
-      <Text
+      <View
         style={{
-          fontSize: 24,
-          fontWeight: "bold",
-          marginBottom: 6,
-          color: "#0f172a",
-        }}
-      >
-        Processos do Cliente
-      </Text>
-
-      <Text
-        style={{
-          fontSize: 16,
-          color: "#475569",
+          backgroundColor: "#0f172a",
+          padding: 20,
+          borderRadius: 18,
+          marginTop: 40,
           marginBottom: 20,
         }}
       >
-        {clientName || "Carregando cliente..."}
-      </Text>
+        <Text
+          style={{
+            color: "#cbd5e1",
+            fontSize: 14,
+            marginBottom: 6,
+          }}
+        >
+          Cliente
+        </Text>
 
-      <TouchableOpacity
+        <Text
+          style={{
+            color: "#ffffff",
+            fontSize: 24,
+            fontWeight: "700",
+            marginBottom: 8,
+          }}
+        >
+          {clientName || "Cliente"}
+        </Text>
+
+        <Text
+          style={{
+            color: "#cbd5e1",
+            fontSize: 14,
+            lineHeight: 20,
+          }}
+        >
+          Acesse os processos e as perícias deste cliente de forma organizada.
+        </Text>
+      </View>
+
+      <View
         style={{
-          backgroundColor: "#22c55e",
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 12,
+          backgroundColor: "#ffffff",
+          padding: 18,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: "#e2e8f0",
+          marginBottom: 14,
         }}
-        onPress={() =>
-          router.push(
-            {
-              pathname: "/lawyer/processes/create",
-              params: { clientId },
-            } as any
-          )
-        }
       >
         <Text
           style={{
-            color: "#fff",
-            textAlign: "center",
-            fontWeight: "bold",
+            fontSize: 18,
+            fontWeight: "700",
+            color: "#0f172a",
+            marginBottom: 6,
           }}
         >
-          + Novo Processo
+          Processos
         </Text>
-      </TouchableOpacity>
 
-      <TouchableOpacity
-        style={{
-          backgroundColor: "#8b5cf6",
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 20,
-        }}
-        onPress={() =>
-          router.push(
-            {
-              pathname: "/lawyer/exams",
-              params: { clientId },
-            } as any
-          )
-        }
-      >
         <Text
           style={{
-            color: "#fff",
-            textAlign: "center",
-            fontWeight: "bold",
+            fontSize: 14,
+            color: "#475569",
+            lineHeight: 20,
+            marginBottom: 14,
           }}
         >
-          Ver Perícias
+          Visualize todos os processos deste cliente e adicione novos quando necessário.
         </Text>
-      </TouchableOpacity>
 
-      <FlatList
-        data={processes}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={
-          <Text style={{ textAlign: "center", color: "#64748b" }}>
-            Nenhum processo encontrado
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#22c55e",
+            paddingVertical: 14,
+            borderRadius: 12,
+          }}
+          onPress={() =>
+            router.push(
+              {
+                pathname: "/lawyer/clients/processes",
+                params: { clientId },
+              } as any
+            )
+          }
+        >
+          <Text
+            style={{
+              color: "#ffffff",
+              textAlign: "center",
+              fontWeight: "700",
+              fontSize: 15,
+            }}
+          >
+            Ver Processos
           </Text>
-        }
-      />
+        </TouchableOpacity>
+      </View>
+
+      <View
+        style={{
+          backgroundColor: "#ffffff",
+          padding: 18,
+          borderRadius: 16,
+          borderWidth: 1,
+          borderColor: "#e2e8f0",
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "700",
+            color: "#0f172a",
+            marginBottom: 6,
+          }}
+        >
+          Perícias
+        </Text>
+
+        <Text
+          style={{
+            fontSize: 14,
+            color: "#475569",
+            lineHeight: 20,
+            marginBottom: 14,
+          }}
+        >
+          Consulte as perícias vinculadas a este cliente e acompanhe os registros.
+        </Text>
+
+        <TouchableOpacity
+          style={{
+            backgroundColor: "#8b5cf6",
+            paddingVertical: 14,
+            borderRadius: 12,
+          }}
+          onPress={() =>
+            router.push(
+              {
+                pathname: "/lawyer/exams",
+                params: { clientId },
+              } as any
+            )
+          }
+        >
+          <Text
+            style={{
+              color: "#ffffff",
+              textAlign: "center",
+              fontWeight: "700",
+              fontSize: 15,
+            }}
+          >
+            Ver Perícias
+          </Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

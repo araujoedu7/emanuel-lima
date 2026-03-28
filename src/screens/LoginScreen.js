@@ -5,12 +5,17 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  StyleSheet,
+  ImageBackground,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { auth, db } from "../services/firebase";
 import { registerForPushNotificationsAsync } from "../services/notifications";
+import colors from "../../theme/colors";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,7 +32,6 @@ export default function LoginScreen() {
       );
 
       const user = userCredential.user;
-      console.log("UID logado:", user.uid);
 
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
@@ -40,9 +44,6 @@ export default function LoginScreen() {
       const userData = userSnap.data();
       const userType = String(userData.type || "").trim().toLowerCase();
 
-      console.log("Dados do Firestore:", userData);
-      console.log("Tipo tratado:", userType);
-
       const expoPushToken = await registerForPushNotificationsAsync();
 
       if (expoPushToken) {
@@ -50,100 +51,143 @@ export default function LoginScreen() {
           await updateDoc(userRef, {
             expoPushToken,
           });
-          console.log("Token salvo no usuário com sucesso.");
-        } catch (tokenError) {
-          console.log("Erro ao salvar token:", tokenError);
+        } catch (error) {
+          console.log(error);
         }
       }
 
       if (userType === "advogado") {
-        console.log("Indo para /lawyer");
         router.replace("/lawyer");
         return;
       }
 
       if (userType === "cliente") {
-        console.log("Indo para /client");
         router.replace("/client");
         return;
       }
 
       Alert.alert("Erro", "Tipo de usuário inválido.");
     } catch (error) {
-      console.log("Erro no login:", error);
       Alert.alert("Erro", error.message || "Não foi possível entrar.");
     }
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        padding: 20,
-        backgroundColor: "#0f172a",
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 28,
-          color: "#fff",
-          marginBottom: 30,
-          textAlign: "center",
-        }}
+    <SafeAreaView style={{ flex: 1 }}>
+      <StatusBar barStyle="light-content" />
+
+      <ImageBackground
+        source={require("../../assets/images/law.jpg")}
+        style={styles.background}
       >
-        Sistema Jurídico
-      </Text>
+        <View style={styles.overlay}>
+          <View style={styles.container}>
+            <View style={styles.header}>
+              <View style={styles.goldLine} />
+              <Text style={styles.title}>Sistema Jurídico</Text>
+              <Text style={styles.subtitle}>
+                Plataforma profissional para gestão jurídica
+              </Text>
+            </View>
 
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor="#aaa"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={{
-          backgroundColor: "#1e293b",
-          color: "#fff",
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 15,
-        }}
-      />
+            <View style={styles.form}>
+              <TextInput
+                placeholder="Email"
+                placeholderTextColor="#aaa"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                style={styles.input}
+              />
 
-      <TextInput
-        placeholder="Senha"
-        placeholderTextColor="#aaa"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={{
-          backgroundColor: "#1e293b",
-          color: "#fff",
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 20,
-        }}
-      />
+              <TextInput
+                placeholder="Senha"
+                placeholderTextColor="#aaa"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+                style={styles.input}
+              />
 
-      <TouchableOpacity
-        onPress={handleLogin}
-        style={{
-          backgroundColor: "#22c55e",
-          padding: 15,
-          borderRadius: 10,
-        }}
-      >
-        <Text
-          style={{
-            textAlign: "center",
-            color: "#fff",
-            fontWeight: "bold",
-          }}
-        >
-          Entrar
-        </Text>
-      </TouchableOpacity>
-    </View>
+              <TouchableOpacity
+                onPress={handleLogin}
+                style={styles.button}
+              >
+                <Text style={styles.buttonText}>Entrar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </ImageBackground>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
+
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(2,6,23,0.75)",
+  },
+
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+  },
+
+  header: {
+    marginBottom: 30,
+  },
+
+  goldLine: {
+    width: 40,
+    height: 4,
+    backgroundColor: colors.gold,
+    borderRadius: 999,
+    marginBottom: 16,
+  },
+
+  title: {
+    fontSize: 30,
+    color: "#fff",
+    fontWeight: "700",
+    marginBottom: 6,
+  },
+
+  subtitle: {
+    color: "rgba(255,255,255,0.7)",
+  },
+
+  form: {
+    backgroundColor: "rgba(255,255,255,0.05)",
+    padding: 18,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.1)",
+  },
+
+  input: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    color: "#fff",
+    padding: 14,
+    borderRadius: 10,
+    marginBottom: 12,
+  },
+
+  button: {
+    backgroundColor: colors.primary,
+    padding: 15,
+    borderRadius: 12,
+    marginTop: 6,
+  },
+
+  buttonText: {
+    textAlign: "center",
+    color: "#fff",
+    fontWeight: "bold",
+  },
+});

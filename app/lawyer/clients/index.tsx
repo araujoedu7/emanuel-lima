@@ -5,12 +5,12 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  StyleSheet,
 } from "react-native";
 
 import { useRouter, useFocusEffect } from "expo-router";
 import {
   collection,
-  deleteDoc,
   doc,
   getDocs,
   query,
@@ -18,6 +18,7 @@ import {
   writeBatch,
 } from "firebase/firestore";
 import { db } from "../../../src/services/firebase";
+import colors from "../../../theme/colors";
 
 type Client = {
   id: string;
@@ -28,7 +29,6 @@ type Client = {
 
 export default function ClientsScreen() {
   const router = useRouter();
-
   const [clients, setClients] = useState<Client[]>([]);
 
   useEffect(() => {
@@ -64,15 +64,13 @@ export default function ClientsScreen() {
     }
   };
 
+  // ✅ TIPADO AQUI
   const handleDeleteClient = (client: Client) => {
     Alert.alert(
       "Excluir cliente",
-      `Deseja excluir ${client.name}? Os processos desse cliente também serão removidos.`,
+      `Deseja excluir ${client.name}?`,
       [
-        {
-          text: "Cancelar",
-          style: "cancel",
-        },
+        { text: "Cancelar", style: "cancel" },
         {
           text: "Excluir",
           style: "destructive",
@@ -80,15 +78,14 @@ export default function ClientsScreen() {
             try {
               const batch = writeBatch(db);
 
-              // Remove o documento do cliente
               batch.delete(doc(db, "users", client.id));
 
-              // Busca e remove os processos vinculados ao cliente
               const processesRef = collection(db, "processes");
               const processesQuery = query(
                 processesRef,
                 where("clientId", "==", client.id)
               );
+
               const processSnapshot = await getDocs(processesQuery);
 
               processSnapshot.forEach((processDoc) => {
@@ -97,14 +94,9 @@ export default function ClientsScreen() {
 
               await batch.commit();
 
-              Alert.alert("Sucesso", "Cliente excluído com sucesso.");
               fetchClients();
-            } catch (error: any) {
-              console.log("Erro ao excluir cliente:", error);
-              Alert.alert(
-                "Erro",
-                error.message || "Não foi possível excluir o cliente."
-              );
+            } catch (error) {
+              console.log(error);
             }
           },
         },
@@ -113,136 +105,44 @@ export default function ClientsScreen() {
   };
 
   const renderItem = ({ item }: { item: Client }) => (
-    <View
-      style={{
-        backgroundColor: "#fff",
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 10,
-        shadowColor: "#000",
-        shadowOpacity: 0.1,
-        shadowRadius: 5,
-        elevation: 3,
-      }}
-    >
+    <View style={styles.card}>
       <TouchableOpacity
-        onPress={() => router.push(`/lawyer/clients/${item.id}` as any)}
+        onPress={() => router.push(`/lawyer/clients/${item.id}`)}
       >
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: "bold",
-            color: "#0f172a",
-          }}
-        >
-          {item.name}
-        </Text>
-
-        <Text
-          style={{
-            color: "#475569",
-            marginTop: 4,
-            marginBottom: 12,
-          }}
-        >
-          {item.email}
-        </Text>
+        <Text style={styles.name}>{item.name}</Text>
+        <Text style={styles.email}>{item.email}</Text>
       </TouchableOpacity>
 
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "flex-end",
-          gap: 10,
-        }}
-      >
+      <View style={styles.actions}>
         <TouchableOpacity
-          style={{
-            backgroundColor: "#dbeafe",
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={styles.editBtn}
           onPress={() =>
-            router.push(
-              {
-                pathname: "/lawyer/clients/edit",
-                params: { clientId: item.id },
-              } as any
-            )
+            router.push({
+              pathname: "/lawyer/clients/edit",
+              params: { clientId: item.id },
+            })
           }
         >
-          <Text
-            style={{
-              fontSize: 18,
-            }}
-          >
-            ✏️
-          </Text>
+          <Text style={styles.icon}>✏️</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={{
-            backgroundColor: "#fee2e2",
-            width: 40,
-            height: 40,
-            borderRadius: 8,
-            alignItems: "center",
-            justifyContent: "center",
-          }}
+          style={styles.deleteBtn}
           onPress={() => handleDeleteClient(item)}
         >
-          <Text
-            style={{
-              fontSize: 18,
-            }}
-          >
-            🗑️
-          </Text>
+          <Text style={styles.icon}>🗑️</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
   return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: "#f1f5f9",
-        padding: 20,
-      }}
-    >
-      <Text
-        style={{
-          fontSize: 24,
-          fontWeight: "bold",
-          marginBottom: 20,
-          color: "#0f172a",
-        }}
-      >
-        👥 Clientes
-      </Text>
-
+    <View style={styles.container}>
       <TouchableOpacity
-        style={{
-          backgroundColor: "#22c55e",
-          padding: 15,
-          borderRadius: 10,
-          marginBottom: 20,
-        }}
-        onPress={() => router.push("/lawyer/clients/create" as any)}
+        style={styles.createButton}
+        onPress={() => router.push("/lawyer/clients/create")}
       >
-        <Text
-          style={{
-            color: "#fff",
-            textAlign: "center",
-            fontWeight: "bold",
-          }}
-        >
-          + Novo Cliente
-        </Text>
+        <Text style={styles.createText}>+ Novo Cliente</Text>
       </TouchableOpacity>
 
       <FlatList
@@ -250,7 +150,7 @@ export default function ClientsScreen() {
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
         ListEmptyComponent={
-          <Text style={{ textAlign: "center", color: "#64748b" }}>
+          <Text style={styles.empty}>
             Nenhum cliente encontrado
           </Text>
         }
@@ -258,3 +158,80 @@ export default function ClientsScreen() {
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.surfaceDark,
+    padding: 20,
+  },
+
+  createButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 16,
+    borderRadius: 14,
+    marginBottom: 20,
+  },
+
+  createText: {
+    color: "#fff",
+    textAlign: "center",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+
+  card: {
+    backgroundColor: "rgba(67, 81, 124, 0.87)",
+    padding: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "rgba(241, 35, 35, 0.06)",
+  },
+
+  name: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: colors.textOnDark,
+  },
+
+  email: {
+    color: "rgba(255,255,255,0.7)",
+    marginTop: 4,
+    marginBottom: 12,
+  },
+
+  actions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+  },
+
+  editBtn: {
+    backgroundColor: "rgba(37,99,235,0.15)",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  deleteBtn: {
+    backgroundColor: "rgba(220,38,38,0.15)",
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  icon: {
+    fontSize: 16,
+  },
+
+  empty: {
+    textAlign: "center",
+    color: "rgba(255,255,255,0.5)",
+    marginTop: 40,
+  },
+});

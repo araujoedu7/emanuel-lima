@@ -1,6 +1,37 @@
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
+import { TouchableOpacity, Text } from "react-native";
 
 export default function RootLayout() {
+  const router = useRouter();
+
+  const renderBackButton = (navigation: any, fallbackRoute: string) => (
+    <TouchableOpacity
+      onPress={() => {
+        if (navigation?.canGoBack?.()) {
+          navigation.goBack();
+          return;
+        }
+
+        router.replace(fallbackRoute as any);
+      }}
+      style={{
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        marginLeft: 4,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 26,
+          color: "#0f172a",
+          fontWeight: "600",
+        }}
+      >
+        ←
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <Stack
       screenOptions={{
@@ -38,9 +69,10 @@ export default function RootLayout() {
 
       <Stack.Screen
         name="client/[processId]"
-        options={{
+        options={({ navigation }) => ({
           title: "Meu Processo",
-        }}
+          headerLeft: () => renderBackButton(navigation, "/client"),
+        })}
       />
 
       <Stack.Screen
@@ -53,45 +85,89 @@ export default function RootLayout() {
 
       <Stack.Screen
         name="lawyer/clients/index"
-        options={{
+        options={({ navigation }) => ({
           title: "Clientes",
-        }}
+          headerLeft: () => renderBackButton(navigation, "/lawyer"),
+        })}
       />
 
       <Stack.Screen
         name="lawyer/clients/create"
-        options={{
+        options={({ navigation }) => ({
           title: "Novo Cliente",
-        }}
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients"),
+        })}
       />
 
       <Stack.Screen
         name="lawyer/clients/[clientId]"
-        options={{
+        options={({ navigation }) => ({
+          title: "Cliente",
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients"),
+        })}
+      />
+
+      <Stack.Screen
+        name="lawyer/clients/processes"
+        options={({ navigation }) => ({
           title: "Processos do Cliente",
-        }}
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients"),
+        })}
       />
 
       <Stack.Screen
         name="lawyer/processes/create"
-        options={{
+        options={({ navigation }) => ({
           title: "Novo Processo",
-        }}
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients/processes"),
+        })}
       />
 
       <Stack.Screen
         name="lawyer/processes/[processId]"
-        options={{
+        options={({ navigation }) => ({
           title: "Detalhes do Processo",
-        }}
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients/processes"),
+        })}
       />
 
       <Stack.Screen
         name="lawyer/processes/edit"
-        options={{
+        options={({ navigation }) => ({
           title: "Editar Processo",
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients/processes"),
+        })}
+      />
+
+      <Stack.Screen
+        name="lawyer/exams"
+        options={({ navigation }) => ({
+          title: "Perícias",
+          headerLeft: () => renderBackButton(navigation, "/lawyer/clients"),
+        })}
+      />
+
+      <Stack.Screen
+        name="lawyer/exams/edit"
+        options={{
+          title: "Editar Perícia",
         }}
       />
+      <Stack.Screen
+        name="lawyer/exams/index"
+        options={{
+          title: "Perícias",
+        }}
+      />
+<Stack.Screen
+        name="lawyer/index"
+        options={{
+          title: "Home",
+        }}
+      />
+
     </Stack>
+
+
   );
 }
